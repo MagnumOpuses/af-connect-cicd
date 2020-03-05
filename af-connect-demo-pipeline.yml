@@ -8,8 +8,8 @@ spec:
   source:
     type: git
     git:
-      ref: stage
-      uri: https://github.com/MagnumOpuses/af-connect-demo.git
+      ref: dev
+      uri: https://github.com/MagnumOpuses/af-connect-cicd.git
   strategy:
     jenkinsPipelineStrategy:
       jenkinsfilePath: ./af-connect-demo.Jenkinsfile
