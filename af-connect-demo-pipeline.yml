@@ -12,7 +12,7 @@ spec:
       uri: https://github.com/MagnumOpuses/af-connect-demo.git
   strategy:
     jenkinsPipelineStrategy:
-      jenkinsfilePath: ./Jenkinsfile
+      jenkinsfilePath: ./af-connect-demo.Jenkinsfile
     type: JenkinsPipeline
   triggers:
     - github:
