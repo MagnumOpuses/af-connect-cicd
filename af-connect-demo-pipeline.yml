@@ -8,13 +8,10 @@ spec:
   source:
     type: git
     git:
-      ref: jenkins/test-field
+      ref: jenkins/deploy
       uri: https://github.com/MagnumOpuses/af-connect-demo.git
   strategy:
     jenkinsPipelineStrategy:
       jenkinsfilePath: ./Jenkinsfile
     type: JenkinsPipeline
-  triggers:
-    - github:
-        secret: secret
-      type: GitHub
+  triggers: []
