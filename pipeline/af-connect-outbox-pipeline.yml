@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: BuildConfig
+metadata:
+    labels:
+        app: af-connect-outbox-pipeline
+    name: af-connect-outbox-pipeline
+spec:
+    source:
+        type: git
+        git:
+            ref: jenkins/deploy
+            uri: https://github.com/MagnumOpuses/af-connect-outbox.git
+    strategy:
+        jenkinsPipelineStrategy:
+            jenkinsfilePath: ./Jenkinsfile
+        type: JenkinsPipeline
+    triggers:
+        - github:
+              secret: secret
+          type: GitHub

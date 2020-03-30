@@ -1,0 +1,102 @@
+kind: BuildConfig
+apiVersion: build.openshift.io/v1
+metadata:
+  name: skopeo-demo-pipeline
+  annotations:
+    application: skopeodemo
+spec:
+  triggers: []
+  nodeSelector: {}
+  output: {}
+  resources: {}
+  successfulBuildsHistoryLimit: 5
+  failedBuildsHistoryLimit: 5
+  strategy:
+    type: JenkinsPipeline
+    jenkinsPipelineStrategy:
+      jenkinsfile: |-
+        pipeline {
+          agent {
+              kubernetes {
+                  label 'promotion-agent'
+                  cloud 'openshift'
+                  serviceAccount 'jenkins'
+                  containerTemplate {
+                      name 'jnlp'
+                      image "image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/skopeo:latest"
+                      alwaysPullImage true
+                      workingDir '/tmp'
+                      args '${computer.jnlpmac} ${computer.name}'
+                      command ''
+                      ttyEnabled false
+                    }
+              }
+          }
+            environment {
+                buildTag = "${BUILD_NUMBER}"
+                buildName = "af-connect-demo"
+                deploymentName = "af-connect-demo"
+                containerName = "af-connect-demo"
+            }
+            stages {
+                stage('Push Image'){
+                    steps{
+                        container('jnlp'){
+                            sh "echo 'pushing images'"
+                            sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
+                            --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
+                            docker://${AF_CONNECT_DEMO_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_DEMO_DEST_IMAGE_REPO}:latest
+                            """
+                            sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
+                            --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
+                            docker://${AF_CONNECT_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_DEST_IMAGE_REPO}:latest
+                            """
+                            sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
+                            --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
+                            docker://${AF_CONNECT_OUTBOX_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_OUTBOX_DEST_IMAGE_REPO}:latest
+                            """
+                            sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
+                            --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
+                            docker://${AF_CONNECT_MOCK_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_MOCK_DEST_IMAGE_REPO}:latest
+                            """
+                            sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
+                            --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
+                            docker://${AF_PORTABILITY_SOURCE_IMAGE_REPO}:latest docker://${AF_PORTABILITY_DEST_IMAGE_REPO}:latest
+                            """
+                            
+                        }
+                    }
+                }
+              }
+          }
+      env:
+        - name: NAMESPACE
+          value: "af-connect-cicd"
+        - name: SCRED
+          value: >-
+            eyJhbGciOiJSUzI1NiIsImtpZCI6InFobzVsbGZqNU5aWlZpRTRLZmk3OHhBcG4zWmxVQXNuYVYxM3QtRERSdXcifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJhZi1jb25uZWN0LWNpY2QiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlY3JldC5uYW1lIjoic2tvcGVvLXRva2VuLTVmajdsIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6InNrb3BlbyIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6ImJjYmEyMWNlLTRmMzQtNDgxMC1iMGRiLTk2MGNiNDhmMTJkNyIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDphZi1jb25uZWN0LWNpY2Q6c2tvcGVvIn0.MztiN90iJJ4vg8P7iEGIoFbj2YOsiQNGA7cz1Na4qwzIFZQm-W-oZ66Jk6OM7aLM7QuAo-s_E9c6EPFaKDEDtxu6OKpxEwbclHyrbkPb5olUFHbf4db_Rqbw2e4GldSz2Ylo3wxcvxycqoTohA5h4EPjSoUyPoRzxF9zd1OEwoWyTiv467iAXwTI1tmGuxvBfhOkOcCDBb21iBq5lICMxjPVe_fV1ai5uInWjPDv0Nh7C3v_RKM-M65Zers5skwrhVfcPFzuA3fqNNsWJN4Q_j5ZRPOE9ng-k-NsPlv_T8PIblwFbv7O8OHOtCwRcy0Vj341iys6hVcKeMItqkOooA
+        - name: DCRED
+          value: >-
+            eyJhbGciOiJSUzI1NiIsImtpZCI6Imo4eXVMWXR6NVRLcFFDOS1DZV83Vk9yVDlmS0l3bWc2UDRTRm1BY0JSR0UifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJhZi1jb25uZWN0LW1vY2siLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlY3JldC5uYW1lIjoic2tvcGVvLXRva2VuLWs5Z3N4Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6InNrb3BlbyIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6IjExYTZiNjE1LWNjZGEtNDdiNC04ODc0LTU0NWRkMzM2NzUyMCIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDphZi1jb25uZWN0LW1vY2s6c2tvcGVvIn0.isXd61bflnKMXlNUYU0DOhZgckg4yQ4MxXOA5lrINZF4WJofeNmufalFTc0aNbvp9DSc6X26DPqk5rcMWThZxuCL2PvzpogKlkDaNO1JxZnLQ5PhjdG9qjjQZ7dFtYXhQGjWAl2V-ZtWu3KECQjMnfAeahbhcWOpHXvW_1166krdC5QIrECdu_nPoVK5zqRQd2s9AkXIIdUvLpVW8S_AT4lcfQu8glyePy31EHvF17_eVnhWm-f5LsTLuJTXHLRcdXBSm5VsT0ToFlBtGL6zupgOnTGWw3Qd4KA9lf6UwfFzsm7YJTKdAvPnos7_n8PNYV84DtKTMxjUP69cSdAetQ
+        - name: AF_CONNECT_DEMO_SOURCE_IMAGE_REPO
+          value: "default-route-openshift-image-registry.test.services.jtech.se/af-connect-cicd/af-connect-demo"
+        - name: AF_CONNECT_DEMO_DEST_IMAGE_REPO
+          value: "default-route-openshift-image-registry.prod.services.jtech.se/af-connect-mock/af-connect-demo"
+        - name: AF_CONNECT_SOURCE_IMAGE_REPO
+          value: "default-route-openshift-image-registry.test.services.jtech.se/af-connect-cicd/af-connect"
+        - name: AF_CONNECT_DEST_IMAGE_REPO
+          value: "default-route-openshift-image-registry.prod.services.jtech.se/af-connect-mock/af-connect"
+        - name: AF_CONNECT_OUTBOX_SOURCE_IMAGE_REPO
+          value: "default-route-openshift-image-registry.test.services.jtech.se/af-connect-cicd/af-connect-outbox"
+        - name: AF_CONNECT_OUTBOX_DEST_IMAGE_REPO
+          value: "default-route-openshift-image-registry.prod.services.jtech.se/af-connect-mock/af-connect-outbox"
+        - name: AF_CONNECT_MOCK_SOURCE_IMAGE_REPO
+          value: "default-route-openshift-image-registry.test.services.jtech.se/af-connect-cicd/af-connect-mock"
+        - name: AF_CONNECT_MOCK_DEST_IMAGE_REPO
+          value: "default-route-openshift-image-registry.prod.services.jtech.se/af-connect-mock/af-connect-outbox"
+        - name: AF_PORTABILITY_SOURCE_IMAGE_REPO
+          value: "default-route-openshift-image-registry.test.services.jtech.se/af-connect-cicd/af-portability"
+        - name: AF_PORTABILITY_DEST_IMAGE_REPO
+          value: "default-route-openshift-image-registry.prod.services.jtech.se/af-connect-mock/af-portability"
+
+  runPolicy: Serial
