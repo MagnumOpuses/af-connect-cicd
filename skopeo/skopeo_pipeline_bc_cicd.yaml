@@ -93,7 +93,7 @@ spec:
         - name: AF_CONNECT_MOCK_SOURCE_IMAGE_REPO
           value: "default-route-openshift-image-registry.test.services.jtech.se/af-connect-cicd/af-connect-mock"
         - name: AF_CONNECT_MOCK_DEST_IMAGE_REPO
-          value: "default-route-openshift-image-registry.prod.services.jtech.se/af-connect-mock/af-connect-outbox"
+          value: "default-route-openshift-image-registry.prod.services.jtech.se/af-connect-mock/af-connect-mock"
         - name: AF_PORTABILITY_SOURCE_IMAGE_REPO
           value: "default-route-openshift-image-registry.test.services.jtech.se/af-connect-cicd/af-portability"
         - name: AF_PORTABILITY_DEST_IMAGE_REPO
