@@ -8,7 +8,7 @@ spec:
     source:
         type: git
         git:
-            ref: jenkins/deploy
+            ref: stage
             uri: https://github.com/MagnumOpuses/af-connect-outbox.git
     strategy:
         jenkinsPipelineStrategy:
