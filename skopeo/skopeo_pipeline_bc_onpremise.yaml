@@ -1,0 +1,75 @@
+kind: BuildConfig
+apiVersion: build.openshift.io/v1
+metadata:
+  name: skopeo-prod-pipeline
+  annotations:
+    application: skopeodemo
+spec:
+  triggers: []
+  nodeSelector: {}
+  output: {}
+  resources: {}
+  successfulBuildsHistoryLimit: 5
+  failedBuildsHistoryLimit: 5
+  strategy:
+    type: JenkinsPipeline
+    jenkinsPipelineStrategy:
+      jenkinsfile: |-
+        pipeline {
+          agent {
+              kubernetes {
+                  label 'promotion-agent'
+                  cloud 'openshift'
+                  serviceAccount 'jenkins'
+                  containerTemplate {
+                      name 'jnlp'
+                      image "image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/skopeo:latest"
+                      alwaysPullImage true
+                      workingDir '/tmp'
+                      args '${computer.jnlpmac} ${computer.name}'
+                      command ''
+                      ttyEnabled false
+                    }
+              }
+          }
+            environment {
+                buildTag = "${BUILD_NUMBER}"
+                buildName = "af-connect-demo"
+                deploymentName = "af-connect-demo"
+                containerName = "af-connect-demo"
+            }
+            stages {
+                stage('Push Image'){
+                    steps{
+                        container('jnlp'){
+                            sh "echo 'pushing images'"
+                            sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
+                            --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
+                            docker://${AF_CONNECT_DEMO_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_DEMO_DEST_IMAGE_REPO}:latest
+                            """
+                            
+                        }
+                    }
+                }
+              }
+          }
+      env:
+        - name: NAMESPACE
+          value: "af-connect-cicd"
+        
+        - name: SCRED
+          value: >-
+            eyJhbGciOiJSUzI1NiIsImtpZCI6InFobzVsbGZqNU5aWlZpRTRLZmk3OHhBcG4zWmxVQXNuYVYxM3QtRERSdXcifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJhZi1jb25uZWN0LWNpY2QiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlY3JldC5uYW1lIjoic2tvcGVvLXRva2VuLTVmajdsIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6InNrb3BlbyIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6ImJjYmEyMWNlLTRmMzQtNDgxMC1iMGRiLTk2MGNiNDhmMTJkNyIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDphZi1jb25uZWN0LWNpY2Q6c2tvcGVvIn0.MztiN90iJJ4vg8P7iEGIoFbj2YOsiQNGA7cz1Na4qwzIFZQm-W-oZ66Jk6OM7aLM7QuAo-s_E9c6EPFaKDEDtxu6OKpxEwbclHyrbkPb5olUFHbf4db_Rqbw2e4GldSz2Ylo3wxcvxycqoTohA5h4EPjSoUyPoRzxF9zd1OEwoWyTiv467iAXwTI1tmGuxvBfhOkOcCDBb21iBq5lICMxjPVe_fV1ai5uInWjPDv0Nh7C3v_RKM-M65Zers5skwrhVfcPFzuA3fqNNsWJN4Q_j5ZRPOE9ng-k-NsPlv_T8PIblwFbv7O8OHOtCwRcy0Vj341iys6hVcKeMItqkOooA
+        
+        - name: DCRED
+          value: >-
+            eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJhZi1jb25uZWN0Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6InNrb3Blby10b2tlbi02ODZudiIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50Lm5hbWUiOiJza29wZW8iLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiIxMmEyYTRhYy03M2VhLTExZWEtOGUwMy0wMDUwNTY5NjY5YjIiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6YWYtY29ubmVjdDpza29wZW8ifQ.AwvZcJ5IDfByIWDArwa6c3DSLmNmMpRf01sHRF7r-MX85FhJvssJAg2ZsF-jSq80ZnodMOyiBH4ta3EeeN0qaS2y8Sz6j5wWOxn-4EAPQjss2ODJ6ywSfLa5R4gEEtSqab1UkynZb2-xN1krsOY5LQngEaxoQp2vMHH3SOBXq2eD4IRELHOiRZWYJByUmDwAC5uCP_QKRryrVM4UmBUKOSh7B63N5dSbR5K8amcfZ-lxqEYkXaT5fXNV7zjp6Ut-htppAlGPJNW8LZgniw9YWaEvq32f2gzf4o9V2QQmST28dofbt1jb22qqHpMvGX98r2hulk48hoFES5vXrGP_hg
+        
+        - name: AF_CONNECT_DEMO_SOURCE_IMAGE_REPO
+          value: "default-route-openshift-image-registry.test.services.jtech.se/af-connect-cicd/af-connect-demo"
+        
+        - name: AF_CONNECT_DEMO_DEST_IMAGE_REPO
+          value: "https://docker-registry-default.opservices.jtech.se/af-connect/af-connect-demo"
+        
+
+  runPolicy: Serial
