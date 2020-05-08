@@ -48,7 +48,7 @@ objects:
                             - '${APPLICATION_NAME}'
                         from:
                             kind: ImageStreamTag
-                            namespace: '${NAMESPACE}'
+                            namespace: '${NAMESPACE_ONPREM}'
                             name: '${APPLICATION_NAME}:latest'
                 -
                     type: ConfigChange
@@ -65,7 +65,7 @@ objects:
                         -
                             name: '${APPLICATION_NAME}'
                             image: >-
-                                image-registry.openshift-image-registry.svc:5000/'${NAMESPACE}'/'${APPLICATION_NAME}'
+                                '${IMAGE_REGISTRY_ONPREM}'/'${NAMESPACE_ONPREM}'/'${APPLICATION_NAME}'
                             ports:
                                 - containerPort: 3000
                                   protocol: TCP
@@ -101,7 +101,13 @@ parameters:
         displayName: Namespace
         description: 'The OpenShift Namespace where the ImageStream resides.'
         required: true
-        value: ''
+        value: 'af-connect'
+    -
+        name: NAMESPACE_ONPREM
+        displayName: Namespace
+        description: 'The OpenShift Namespace where the ImageStream resides in the on premise cluster.'
+        required: true
+        value: 'af-connect'
     -
         name: SOURCE_REPOSITORY_URL
         displayName: 'Git Repository URL'
@@ -134,3 +140,11 @@ parameters:
     -
         name: HOST
         value: localhost
+    -
+        name: IMAGE_REGISTRY_JTECHPROD
+        description: 'image registry url for the jobtech prod cluster'
+        value: 'image-registry.openshift-image-registry.svc:5000'
+    -
+        name: IMAGE_REGISTRY_ONPREM
+        description: 'image registry url for the on premise cluster'
+        value: 'docker-registry.default.svc:5000'

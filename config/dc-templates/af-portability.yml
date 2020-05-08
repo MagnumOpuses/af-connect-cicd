@@ -47,7 +47,7 @@ objects:
                             - '${APPLICATION_NAME}'
                         from:
                             kind: ImageStreamTag
-                            namespace: '${NAMESPACE}'
+                            namespace: '${NAMESPACE_ONPREM}'
                             name: '${APPLICATION_NAME}:latest'
                 -
                     type: ConfigChange
@@ -64,7 +64,7 @@ objects:
                         -
                             name: '${APPLICATION_NAME}'
                             image: >-
-                                image-registry.openshift-image-registry.svc:5000/'${NAMESPACE}'/'${APPLICATION_NAME}'
+                                '${IMAGE_REGISTRY_ONPREM}'/'${NAMESPACE_ONPREM}'/'${APPLICATION_NAME}'
                             ports:
                                 - containerPort: 8080
                                   protocol: TCP
@@ -99,6 +99,12 @@ parameters:
         required: true
         value: af-connect-cicd
     -
+        name: NAMESPACE_ONPREM
+        displayName: Namespace
+        description: 'The OpenShift Namespace where the ImageStream resides in the on premise cluster.'
+        required: true
+        value: 'af-connect'
+    -
         name: SOURCE_REPOSITORY_URL
         displayName: 'Git Repository URL'
         description: 'The URL of the repository with your application source code.'
@@ -129,16 +135,16 @@ parameters:
         from: '[a-zA-Z0-9]{40}'
     -
         name: SPRING_IDP_URL
-        value: http://af-connect-mock:9998/jwt/rest/idp/v0/klientID
+        value: ''
     -
         name: SPRING_PROFILE_URL
-        value: http://af-connect-mock:9998/arbetssokandeprofil/rest/af/v1/arbetssokandeprofil/arbetssokandeprofiler
+        value: ''
     -
         name: SPRING_KUNDGIFT_URL
-        value: http://af-connect-mock:9998/arbetssokande/rest/af/v1/arbetssokande/externa-personuppgifter
+        value: ''
     -
         name: SPRING_DATASOURCE_URL
-        value: jdbc:postgresql://apimanager-db:5432/apimanager?user=apimanager&password=kalle123
+        value: ''
     -
         name: SPRING_OUTBOX_HOST
-        value: af-connect-outbox
+        value: ''

@@ -1,0 +1,114 @@
+kind: Template
+apiVersion: v1
+metadata:
+    name: af-connect-demo
+    annotations:
+        openshift.io/display-name: 'AF-Connect Demo Site for Product Demonstration'
+        tags: 'af-connect-demo,demo-site,nodejs'
+        iconClass: icon-nodejs
+        openshift.io/provider-display-name: 'Red Hat, Inc.'
+        openshift.io/documentation-url: 'https://github.com/MagnumOpuses/af-connect-demo'
+labels:
+    template: af-connect-demo
+    app: af-connect-demo
+objects:
+    #-
+    #    kind: ImageStream
+    #    apiVersion: image.openshift.io/v1
+    #    metadata:
+    #        name: af-connect-demo
+    #        annotations:
+    #            description: 'Keeps track of changes in the application image'
+    -
+        kind: BuildConfig
+        apiVersion: build.openshift.io/v1
+        metadata:
+            name: af-connect-demo
+            annotations:
+                description: 'Defines how to build the application'
+        spec:
+            runPolicy: Serial
+            source:
+                type: Git
+                git:
+                    uri: '${SOURCE_REPOSITORY_URL}'
+                    ref: '${SOURCE_REPOSITORY_REF}'
+            strategy:
+                type: Docker
+                dockerStrategy:
+                    env: 
+                        - 
+                            name: HOST
+                            value: '${APPLICATION_HOST}'
+                        - 
+                            name: PORT
+                            value: '${APPLICATION_PORT}'
+            output:
+                to:
+                    kind: ImageStreamTag
+                    name: af-connect-demo:latest
+            triggers: []
+            nodeSelector: {}
+parameters:
+    - 
+        name: IMAGE_TAG
+        displayName: 'Declarative pre-release/release tag for tagging the images'
+        required: false
+        value: ""
+    -
+        name: APPLICATION_NAME
+        displayName: Name
+        description: 'The name assigned to all of the frontend objects defined in this template.'
+        required: true
+        value: af-connect-demo
+    -
+        name: NAMESPACE
+        displayName: Namespace
+        description: 'The OpenShift Namespace where the ImageStream resides.'
+        required: true
+        value: af-connect-cicd
+    -
+        name: NODEJS_VERSION
+        displayName: 'Version of NodeJS Image'
+        description: 'Version of NodeJS image to be used (10, 12, or latest).'
+        value: 10-alpine
+        required: true
+    -
+        name: SOURCE_REPOSITORY_URL
+        displayName: 'Git Repository URL'
+        description: 'The URL of the repository with your application source code.'
+        required: true
+        value: 'https://github.com/MagnumOpuses/af-connect-demo.git'
+    -
+        name: SOURCE_REPOSITORY_REF
+        displayName: 'Git Reference'
+        description: 'Set this to a branch name, tag or other ref of your repository if you are not using the default branch.'
+        required: true
+        value: stage
+    -
+        name: APPLICATION_DOMAIN
+        displayName: 'Application Hostname'
+        description: 'The exposed hostname that will route to the Node.js service, if left blank a value will be defaulted.'
+        value: ""
+    -
+        name: GITHUB_WEBHOOK_SECRET
+        displayName: 'GitHub Webhook Secret'
+        description: 'Github trigger secret.  A difficult to guess string encoded as part of the webhook URL.  Not encrypted.'
+        generate: expression
+        from: '[a-zA-Z0-9]{40}'
+    -
+        name: GENERIC_WEBHOOK_SECRET
+        displayName: 'Generic Webhook Secret'
+        description: 'A secret string used to configure the Generic webhook.'
+        generate: expression
+        from: '[a-zA-Z0-9]{40}'
+    -
+        name: APPLICATION_HOST
+        value: localhost
+    -   
+        name: APPLICATION_PORT
+        value: "3000"
+        from: '[0-9]{4}'
+    - 
+        name: VERSION_TAG
+        value: "no_version"

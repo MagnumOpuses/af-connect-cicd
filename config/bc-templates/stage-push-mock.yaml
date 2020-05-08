@@ -1,9 +1,9 @@
 kind: BuildConfig
 apiVersion: build.openshift.io/v1
 metadata:
-  name: skopeo-t2-pipeline
+  name: stage-push-mock
   annotations:
-    application: skopeodemo
+    application: stage-push-mock
 spec:
   triggers: []
   nodeSelector: {}
@@ -16,22 +16,22 @@ spec:
     jenkinsPipelineStrategy:
       jenkinsfile: |-
         pipeline {
-          agent {
-              kubernetes {
-                  label 'promotion-agent'
-                  cloud 'openshift'
-                  serviceAccount 'jenkins'
-                  containerTemplate {
-                      name 'jnlp'
-                      image "image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/skopeo:latest"
-                      alwaysPullImage true
-                      workingDir '/tmp'
-                      args '${computer.jnlpmac} ${computer.name}'
-                      command ''
-                      ttyEnabled false
+        	agent {
+            	kubernetes {
+                    label 'promotion-agent'
+                    cloud 'openshift'
+                    serviceAccount 'jenkins'
+                    containerTemplate {
+                    	name 'jnlp'
+                    	image "image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/skopeo:latest"
+                    	alwaysPullImage true
+                        workingDir '/tmp'
+                        args '${computer.jnlpmac} ${computer.name}'
+                        command ''
+                        ttyEnabled false
                     }
-              }
-          }
+            	}
+          	}
             environment {
                 buildTag = "${BUILD_NUMBER}"
                 buildName = "af-connect-demo"
@@ -45,11 +45,19 @@ spec:
                             sh "echo 'pushing images'"
                             sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
                             --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
+                            docker://${AF_CONNECT_DEMO_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_DEMO_DEST_IMAGE_REPO}:latest
+                            """
+                            sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
+                            --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
                             docker://${AF_CONNECT_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_DEST_IMAGE_REPO}:latest
                             """
                             sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
                             --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
                             docker://${AF_CONNECT_OUTBOX_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_OUTBOX_DEST_IMAGE_REPO}:latest
+                            """
+                            sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
+                            --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
+                            docker://${AF_CONNECT_MOCK_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_MOCK_DEST_IMAGE_REPO}:latest
                             """
                             sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
                             --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
@@ -64,33 +72,31 @@ spec:
       env:
         - name: NAMESPACE
           value: "af-connect-cicd"
-        
         - name: SCRED
           value: >-
             
         - name: DCRED
           value: >-
             
+        - name: AF_CONNECT_DEMO_SOURCE_IMAGE_REPO
+          value: "default-route-openshift-image-registry.test.services.jtech.se/af-connect-cicd/af-connect-demo"
+        - name: AF_CONNECT_DEMO_DEST_IMAGE_REPO
+          value: "default-route-openshift-image-registry.prod.services.jtech.se/af-connect-mock/af-connect-demo"
         - name: AF_CONNECT_SOURCE_IMAGE_REPO
           value: "default-route-openshift-image-registry.test.services.jtech.se/af-connect-cicd/af-connect"
-
         - name: AF_CONNECT_DEST_IMAGE_REPO
-          value: "docker-registry-default.opservices.jtech.se/gravity-t2/af-connect"
-
+          value: "default-route-openshift-image-registry.prod.services.jtech.se/af-connect-mock/af-connect"
         - name: AF_CONNECT_OUTBOX_SOURCE_IMAGE_REPO
           value: "default-route-openshift-image-registry.test.services.jtech.se/af-connect-cicd/af-connect-outbox"
-
         - name: AF_CONNECT_OUTBOX_DEST_IMAGE_REPO
-          value: "docker-registry-default.opservices.jtech.se/gravity-t2/af-connect-outbox"
-
+          value: "default-route-openshift-image-registry.prod.services.jtech.se/af-connect-mock/af-connect-outbox"
+        - name: AF_CONNECT_MOCK_SOURCE_IMAGE_REPO
+          value: "default-route-openshift-image-registry.test.services.jtech.se/af-connect-cicd/af-connect-mock"
+        - name: AF_CONNECT_MOCK_DEST_IMAGE_REPO
+          value: "default-route-openshift-image-registry.prod.services.jtech.se/af-connect-mock/af-connect-mock"
         - name: AF_PORTABILITY_SOURCE_IMAGE_REPO
           value: "default-route-openshift-image-registry.test.services.jtech.se/af-connect-cicd/af-portability"
-
         - name: AF_PORTABILITY_DEST_IMAGE_REPO
-          value: "docker-registry-default.opservices.jtech.se/gravity-t2/af-portability"
-
-        
-
-        
+          value: "default-route-openshift-image-registry.prod.services.jtech.se/af-connect-mock/af-portability"
 
   runPolicy: Serial

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: BuildConfig
+metadata:
+  labels:
+    app: af-connect-demo-test-pipeline
+  name: af-connect-demo-test-pipeline
+spec:
+  source:
+    type: git
+    git:
+      ref: jenkins/modify
+      uri: https://github.com/MagnumOpuses/af-connect-demo.git
+  strategy:
+    jenkinsPipelineStrategy:
+      jenkinsfilePath: ./Jenkinsfile
+    type: JenkinsPipeline
+  triggers: []

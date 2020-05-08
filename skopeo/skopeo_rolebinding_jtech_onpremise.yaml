@@ -9,5 +9,5 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: skopeo
-  namespace: af-connect
+  namespace: gravity-t2
 
