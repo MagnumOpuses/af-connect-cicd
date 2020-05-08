@@ -1,0 +1,40 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: jnlp-skopeo
+spec:
+  failedBuildsHistoryLimit: 5
+  nodeSelector: {}
+  output:
+    to:
+      kind: ImageStreamTag
+      name: skopeo:latest
+  postCommit: {}
+  resources: {}
+  runPolicy: Serial
+  source:
+    dockerfile: |-
+      FROM docker.io/openshift/jenkins-slave-base-centos7:latest
+
+      LABEL com.redhat.component="jenkins-skopeo-slave" \
+      name="jenkins-skopeo-slave" \
+      architecture="x86_64" \
+      io.k8s.display-name="Jenkins Slave Image Management" \
+      io.k8s.description="Image management tools on top of the jenkins slave base image" \
+      io.openshift.tags="openshift,jenkins,slave,copy"
+      USER root
+
+      RUN yum repolist > /dev/null && \
+      yum clean all && \
+      INSTALL_PKGS="skopeo" && \
+      yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
+      rpm -V $INSTALL_PKGS && \
+      yum clean all
+
+      USER 1001
+    type: Dockerfile
+  strategy:
+    dockerStrategy: {}
+    type: Docker
+  successfulBuildsHistoryLimit: 5
+  triggers: []

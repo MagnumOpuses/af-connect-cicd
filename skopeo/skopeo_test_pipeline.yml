@@ -1,0 +1,129 @@
+kind: BuildConfig
+apiVersion: build.openshift.io/v1
+metadata:
+  name: skopeo-test-pipeline
+spec:
+  triggers: []
+  nodeSelector: {}
+  output: {}
+  resources: {}
+  successfulBuildsHistoryLimit: 5
+  failedBuildsHistoryLimit: 5
+  strategy:
+    type: JenkinsPipeline
+    jenkinsPipelineStrategy:
+      jenkinsfile: |-
+        import groovy.json.JsonSlurper
+
+        def getDockerImages() {
+            def cmd = [ 'bash', '-c', "curl https://api.github.com/repos/MagnumOpuses/af-connect-demo/tags | grep 'name'".toString()]
+            def result = cmd.execute().text
+
+            def slurper = new JsonSlurper()
+            def json = slurper.parseText(result)
+            def tags = new ArrayList()
+            if (json.tags == null || json.tags.size == 0)
+              tags.add("unable to fetch tags for ${APP_NAME}")
+            else
+              tags.addAll(json.tags)
+            return tags.join('\n')
+        }
+        pipeline {
+          agent {
+              kubernetes {
+                  label 'promotion-agent'
+                  cloud 'openshift'
+                  serviceAccount 'jenkins'
+                  containerTemplate {
+                      name 'jnlp'
+                      image "image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/skopeo:latest"
+                      alwaysPullImage true
+                      workingDir '/tmp'
+                      args '${computer.jnlpmac} ${computer.name}'
+                      command ''
+                      ttyEnabled false
+                    }
+              }
+          }
+            environment {
+                buildTag = "${BUILD_NUMBER}"
+                buildName = "af-connect-demo"
+                deploymentName = "af-connect-demo"
+                containerName = "af-connect-demo"
+            }
+            stages {
+              
+              stage('Get tags') {
+                steps {
+                  timeout(time: 60, unit: 'SECONDS') {
+                    script {
+                      // Show the select input modal
+                      def INPUT_PARAMS = input message: 'Please Provide Parameters', ok: 'Next',
+                                          parameters: [
+                                          choice(name: 'IMAGE_TAG', choices: getDockerImages(), description: 'Available tags')]
+                      
+                      env.IMAGE_TAG = INPUT_PARAMS.IMAGE_TAG
+                      
+                    }
+                  }
+                }
+              }
+              /*
+              stage('Push Image'){
+                steps {
+                  container('jnlp') {
+                    sh "echo 'pushing images'"
+                    sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
+                    --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
+                    docker://${AF_CONNECT_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_DEST_IMAGE_REPO}:latest
+                    """
+                    sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
+                    --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
+                    docker://${AF_CONNECT_OUTBOX_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_OUTBOX_DEST_IMAGE_REPO}:latest
+                    """
+                    sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
+                    --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
+                    docker://${AF_PORTABILITY_SOURCE_IMAGE_REPO}:latest docker://${AF_PORTABILITY_DEST_IMAGE_REPO}:latest
+                    """
+                            
+                  }
+                }
+              }
+              */
+            }
+          }
+      env:
+        - name: NAMESPACE
+          value: "af-connect-cicd"
+        
+        - name: SCRED
+          value: >-
+            
+        
+        - name: DCRED
+          value: >-
+            
+        
+        - name: AF_CONNECT_SOURCE_IMAGE_REPO
+          value: "default-route-openshift-image-registry.test.services.jtech.se/af-connect-cicd/af-connect"
+
+        - name: AF_CONNECT_DEST_IMAGE_REPO
+          value: "docker-registry-default.opservices.jtech.se/gravity-t2/af-connect"
+
+        - name: AF_CONNECT_OUTBOX_SOURCE_IMAGE_REPO
+          value: "default-route-openshift-image-registry.test.services.jtech.se/af-connect-cicd/af-connect-outbox"
+
+        - name: AF_CONNECT_OUTBOX_DEST_IMAGE_REPO
+          value: "docker-registry-default.opservices.jtech.se/gravity-t2/af-connect-outbox"
+
+        - name: AF_PORTABILITY_SOURCE_IMAGE_REPO
+          value: "default-route-openshift-image-registry.test.services.jtech.se/af-connect-cicd/af-portability"
+
+        - name: AF_PORTABILITY_DEST_IMAGE_REPO
+          value: "docker-registry-default.opservices.jtech.se/gravity-t2/af-portability"
+
+        
+
+        
+
+  runPolicy: Serial

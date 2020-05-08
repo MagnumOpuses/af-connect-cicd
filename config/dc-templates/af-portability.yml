@@ -1,0 +1,150 @@
+kind: Template
+apiVersion: v1
+metadata:
+    name: af-portability
+    annotations:
+        openshift.io/display-name: 'AF-Connect Portability'
+        description: "An Spring boot application for transferring CV data from AF"
+        tags: 'af-portability,java,spring-boot'
+        openshift.io/documentation-url: '${SOURCE_REPOSITORY_URL}'
+labels:
+    template: '${APPLICATION_NAME}'
+    app: '${APPLICATION_NAME}'
+objects:
+    -
+        kind: Service
+        apiVersion: v1
+        metadata:
+            name: '${APPLICATION_NAME}'
+            annotations:
+                description: 'Exposes and load balances the application pods'
+        spec:
+            ports:
+                -
+                    name: http
+                    port: 8080
+                    protocol: TCP
+                    targetPort: 8080
+            selector:
+                deploymentconfig: '${APPLICATION_NAME}'
+    -
+        kind: DeploymentConfig
+        apiVersion: v1
+        metadata:
+            name: '${APPLICATION_NAME}'
+            annotations:
+                description: 'Defines how to deploy the application server'
+                template.alpha.openshift.io/wait-for-ready: 'true'
+        spec:
+            strategy:
+                type: Rolling
+            triggers:
+                -
+                    type: ImageChange
+                    imageChangeParams:
+                        automatic: true
+                        containerNames: 
+                            - '${APPLICATION_NAME}'
+                        from:
+                            kind: ImageStreamTag
+                            namespace: '${NAMESPACE_ONPREM}'
+                            name: '${APPLICATION_NAME}:latest'
+                -
+                    type: ConfigChange
+            replicas: 1
+            selector:
+                name: '${APPLICATION_NAME}'
+            template:
+                metadata:
+                    name: '${APPLICATION_NAME}'
+                    labels:
+                        name: '${APPLICATION_NAME}'
+                spec:
+                    containers: 
+                        -
+                            name: '${APPLICATION_NAME}'
+                            image: >-
+                                '${IMAGE_REGISTRY_ONPREM}'/'${NAMESPACE_ONPREM}'/'${APPLICATION_NAME}'
+                            ports:
+                                - containerPort: 8080
+                                  protocol: TCP
+                            env: 
+                                - name: SPRING_IDP_URL
+                                  value: '${SPRING_IDP_URL}'
+                                - name: SPRING_PROFILE_URL
+                                  value: '${SPRING_PROFILE_URL}'
+                                - name: SPRING_KUNDGIFT_URL
+                                  value: '${SPRING_KUNDGIFT_URL}'
+                                - name: SPRING_DATASOURCE_URL
+                                  value: '${SPRING_DATASOURCE_URL}'
+                                - name: SPRING_OUTBOX_HOST
+                                  value: '${SPRING_OUTBOX_HOST}'
+                    restartPolicy: Always
+                    terminationGracePeriodSeconds: 30
+                    dnsPolicy: ClusterFirst
+                    securityContext: {}
+                    schedulerName: default-scheduler
+                    
+parameters:
+    -
+        name: APPLICATION_NAME
+        displayName: Name
+        description: 'The name assigned to all of the frontend objects defined in this template.'
+        required: true
+        value: af-portability
+    -
+        name: NAMESPACE
+        displayName: Namespace
+        description: 'The OpenShift Namespace where the ImageStream resides.'
+        required: true
+        value: af-connect-cicd
+    -
+        name: NAMESPACE_ONPREM
+        displayName: Namespace
+        description: 'The OpenShift Namespace where the ImageStream resides in the on premise cluster.'
+        required: true
+        value: 'af-connect'
+    -
+        name: SOURCE_REPOSITORY_URL
+        displayName: 'Git Repository URL'
+        description: 'The URL of the repository with your application source code.'
+        required: true
+        value: 'https://github.com/MagnumOpuses/af-portability.git'
+    -
+        name: SOURCE_REPOSITORY_REF
+        displayName: 'Git Reference'
+        description: 'Set this to a branch name, tag or other ref of your repository if you are not using the default branch.'
+        required: true
+        value: 'jenkins/deploy'
+    -
+        name: APPLICATION_DOMAIN
+        displayName: 'Application Hostname'
+        description: 'The exposed hostname that will route to the Node.js service, if left blank a value will be defaulted.'
+        value: ""
+    -
+        name: GITHUB_WEBHOOK_SECRET
+        displayName: 'GitHub Webhook Secret'
+        description: 'Github trigger secret.  A difficult to guess string encoded as part of the webhook URL.  Not encrypted.'
+        generate: expression
+        from: '[a-zA-Z0-9]{40}'
+    -
+        name: GENERIC_WEBHOOK_SECRET
+        displayName: 'Generic Webhook Secret'
+        description: 'A secret string used to configure the Generic webhook.'
+        generate: expression
+        from: '[a-zA-Z0-9]{40}'
+    -
+        name: SPRING_IDP_URL
+        value: ''
+    -
+        name: SPRING_PROFILE_URL
+        value: ''
+    -
+        name: SPRING_KUNDGIFT_URL
+        value: ''
+    -
+        name: SPRING_DATASOURCE_URL
+        value: ''
+    -
+        name: SPRING_OUTBOX_HOST
+        value: ''

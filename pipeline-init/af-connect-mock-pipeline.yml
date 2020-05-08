@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: BuildConfig
+metadata:
+  labels:
+    app: af-connect-mock-pipeline
+  name: af-connect-mock-pipeline
+spec:
+  source:
+    type: git
+    git:
+      ref: stage
+      uri: https://github.com/MagnumOpuses/af-connect-mock.git
+  strategy:
+    jenkinsPipelineStrategy:
+      jenkinsfilePath: ./Jenkinsfile
+    type: JenkinsPipeline
+  triggers:
+    - github:
+        secret: secret
+      type: GitHub
