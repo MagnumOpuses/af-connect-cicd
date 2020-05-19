@@ -15,60 +15,83 @@ spec:
     type: JenkinsPipeline
     jenkinsPipelineStrategy:
       jenkinsfile: |-
+        def artifacts = [
+          'af-connect', 'af-portability', 'af-connect-outbox'
+        ]
         pipeline {
         	agent {
-            	kubernetes {
-                    label 'promotion-agent'
-                    cloud 'openshift'
-                    serviceAccount 'jenkins'
-                    containerTemplate {
-                    	name 'jnlp'
-                    	image "image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/skopeo:latest"
-                    	alwaysPullImage true
-                        workingDir '/tmp'
-                        args '${computer.jnlpmac} ${computer.name}'
-                        command ''
-                        ttyEnabled false
-                    }
-            	}
-          	}
-            environment {
-                buildTag = "${BUILD_NUMBER}"
-                buildName = "af-connect-demo"
-                deploymentName = "af-connect-demo"
-                containerName = "af-connect-demo"
+            kubernetes {
+              label 'promotion-agent'
+              cloud 'openshift'
+              serviceAccount 'jenkins'
+              containerTemplate {
+                name 'jnlp'
+                image "image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/skopeo:latest"
+                alwaysPullImage true
+                workingDir '/tmp'
+                args '${computer.jnlpmac} ${computer.name}'
+                command ''
+                ttyEnabled false
+              }
             }
-            stages {
-                stage('Push Image'){
-                    steps{
-                        container('jnlp'){
-                            sh "echo 'pushing images'"
-                            sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
-                            --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
-                            docker://${AF_CONNECT_DEMO_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_DEMO_DEST_IMAGE_REPO}:latest
-                            """
-                            sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
-                            --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
-                            docker://${AF_CONNECT_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_DEST_IMAGE_REPO}:latest
-                            """
-                            sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
-                            --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
-                            docker://${AF_CONNECT_OUTBOX_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_OUTBOX_DEST_IMAGE_REPO}:latest
-                            """
-                            sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
-                            --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
-                            docker://${AF_CONNECT_MOCK_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_MOCK_DEST_IMAGE_REPO}:latest
-                            """
-                            sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
-                            --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
-                            docker://${AF_PORTABILITY_SOURCE_IMAGE_REPO}:latest docker://${AF_PORTABILITY_DEST_IMAGE_REPO}:latest
-                            """
-                            
-                        }
+          }
+          environment {
+            buildTag = "${BUILD_NUMBER}"
+            buildName = "af-connect-demo"
+            deploymentName = "af-connect-demo"
+            containerName = "af-connect-demo"
+          }
+          stages {
+
+            stage('Change Source Ref to Stage') {
+              steps {
+                script {
+                  openshift.withCluster() {
+                    artifacts.each { artifact -> 
+                      def p = openshift.selector("bc/${artifact}").object()
+                      p.spec.source.git.ref = 'stage'
+                      openshift.apply(p)
                     }
+                    
+                  }
                 }
               }
+            }
+            stage('Push Image') {
+              steps{
+                container('jnlp'){
+                  sh "echo 'pushing images'"
+
+                  sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
+                  --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
+                  docker://${AF_CONNECT_DEMO_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_DEMO_DEST_IMAGE_REPO}:latest
+                  """
+
+                  sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
+                  --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
+                  docker://${AF_CONNECT_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_DEST_IMAGE_REPO}:latest
+                  """
+
+                  sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
+                  --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
+                  docker://${AF_CONNECT_OUTBOX_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_OUTBOX_DEST_IMAGE_REPO}:latest
+                  """
+
+                  sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
+                  --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
+                  docker://${AF_CONNECT_MOCK_SOURCE_IMAGE_REPO}:latest docker://${AF_CONNECT_MOCK_DEST_IMAGE_REPO}:latest
+                  """
+
+                  sh """skopeo --debug copy --src-tls-verify=false --dest-tls-verify=false \
+                  --src-creds=skopeo:${SCRED} --dest-creds=skopeo:${DCRED} \
+                  docker://${AF_PORTABILITY_SOURCE_IMAGE_REPO}:latest docker://${AF_PORTABILITY_DEST_IMAGE_REPO}:latest
+                  """
+                            
+                }
+              }
+            }
           }
+        }
       env:
         - name: NAMESPACE
           value: "af-connect-cicd"

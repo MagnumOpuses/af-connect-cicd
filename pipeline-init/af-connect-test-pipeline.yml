@@ -1,17 +1,27 @@
-apiVersion: v1
 kind: BuildConfig
+apiVersion: build.openshift.io/v1
 metadata:
+  name: af-connect-test-pipeline
+  namespace: af-connect-cicd
   labels:
-    app: af-connect-demo-test-pipeline
-  name: af-connect-demo-test-pipeline
+    app: af-connect-test-pipeline
 spec:
-  source:
-    type: git
-    git:
-      ref: jenkins/modify
-      uri: https://github.com/MagnumOpuses/af-connect-demo.git
+  nodeSelector: {}
+  output: {}
+  resources: {}
+  successfulBuildsHistoryLimit: 5
+  failedBuildsHistoryLimit: 5
   strategy:
-    jenkinsPipelineStrategy:
-      jenkinsfilePath: ./Jenkinsfile
     type: JenkinsPipeline
+    jenkinsPipelineStrategy:
+      jenkinsfilePath: Jenkinsfile
+  postCommit: {}
+  source:
+    type: Git
+    git:
+      uri: 'https://github.com/MagnumOpuses/af-portability.git'
+      ref: jenkins/modify
   triggers: []
+  runPolicy: Serial
+status:
+  lastVersion: 8
