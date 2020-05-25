@@ -11,13 +11,13 @@ labels:
     template: af-portability
     app: af-portability
 objects:
-    #-
-    #    kind: ImageStream
-    #    apiVersion: image.openshift.io/v1
-    #    metadata:
-    #        name: af-portability
-    #        annotations:
-    #            description: 'Keeps track of changes in the application image'
+    -
+       kind: ImageStream
+       apiVersion: image.openshift.io/v1
+       metadata:
+           name: af-portability
+           annotations:
+               description: 'Keeps track of changes in the application image'
     -
         kind: BuildConfig
         apiVersion: build.openshift.io/v1
